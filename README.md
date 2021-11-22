@@ -8,4 +8,7 @@ git clone https://github.com/Liang-Ding/seisgen.git
 cd seisgen
 pip install -e .
 ```
-
+or using pip 
+```shell
+pip install seisgen
+```
