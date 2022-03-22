@@ -206,7 +206,7 @@ class DSGTMgr(DPointCloud):
         for i, mt_rtp in enumerate(MTs_rtp):
             mt_enz = RTP_to_DENZ(mt_rtp)
             # Synthetic waveform in ENZ
-            _st = DSyn(mt_enz, sgt, MT_ELEMENTS[i])
+            _st = DSyn(mt_enz, sgt, MT_ELEMENTS[i], b_GF=True)
             # Rotation (ENZ => RTZ)
             _st.rotate(method='NE->RT', back_azimuth=ba)
             for _tr in _st:
