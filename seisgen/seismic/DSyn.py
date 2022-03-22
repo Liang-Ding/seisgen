@@ -21,17 +21,19 @@ def RTP_to_DENZ(mt):
     return new_mt
 
 
-def DSyn(mt, sgt, element):
+def DSyn(mt, sgt, element, b_GF=False):
     '''
     :param mt:      The moment tensor (MT) in ENZ
     :param SGT:     The strain Green's tensor.
                     The force order: N-E-Z
     :param element: The string of MT component.
+    :param b_GF:    Calculate the Green's function.
     :return:
     '''
 
     new_mt = mt.copy()
-    new_mt[3:] = 2.0 * new_mt[3:]
+    if not b_GF:
+        new_mt[3:] = 2.0 * new_mt[3:]
 
     n_force = 3
     n_element = 6
