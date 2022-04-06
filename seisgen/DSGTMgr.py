@@ -9,12 +9,13 @@ import os.path
 from seisgen.DPointMgr import DPointCloud
 from seisgen.seismic.DSyn import DSyn, RTP_to_DENZ
 from seisgen.util_SPECFEM3D import get_proc_name
+from seisgen.MTTools.DMomentTensors import DMT_enz
 from seisgen.util_SPECFEM3D.ibool_reader import DEnquire_Element
 from seisgen.util_SPECFEM3D.xyz_reader import DEnquire_XYZ_GLLs_Element
 from seisgen.sgt.sgt_reader import DEnquire_SGT, read_header_info
 from seisgen.math.interp_tools import DCreate_anchors_xi_eta_gamma, DLagrange_interp_sgt, DLagrange_any3D
 from obspy.core import Stream
-from obspy.geodetics.base import gps2dist_azimuth
+from obspy.clients.iris import Client
 import numpy as np
 
 import time
@@ -27,6 +28,15 @@ MT_ELEMENTS = [
     'Mrp',
     'Mtp'
 ]
+
+# fundamental faults
+FF_ELEMENT = [
+            "MEP",
+            "MDD",
+            "MDS",
+            "MSS"
+        ]
+
 
 class DSGTMgr(DPointCloud):
     '''Strain Green's Tensor (SGT) database Manager'''
@@ -165,10 +175,62 @@ class DSGTMgr(DPointCloud):
         '''
 
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
-        (distance, azimuth, back_azimuth) = gps2dist_azimuth(station.latitude, station.longitude,
-                                                             origin.latitude, origin.longitude)
+        client = Client()
+        res = client.distaz(stalat=station.latitude, stalon=station.longitude,
+                            evtlat=origin.latitude, evtlon=origin.longitude)
+        back_azimuth = res['backazimuth']
+        distance_deg = res['distance']
+        distance_m = res['distancemeters']
         stream = self.SGT2GF(sgt, back_azimuth)
         stream.id = station.id
+        return stream
+
+
+    def get_fk_greens_function(self, station, origin, b_new_origin=True, b_save=False, greens_path=None):
+        '''
+        Get FK-type Green's Function between the station-origin pair.
+        :param station: instance of the Station class in MTUQ.
+        :param origin:  the dict of origin.
+                        eg:  origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
+                                              'latitude': 35.601333,
+                                              'longitude': -117.597,
+                                              'depth_in_m': 2810.0,
+                                              'id': 'evt11056825'})
+
+        :param b_new_origin: Accelerating the extraction of SGT data for multiple stations with the same origin.
+        :param b_save:  Whether to save the greens function to file?
+        :para greens_path: the path to store the Green's function
+        '''
+        sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
+
+        client = Client()
+        res = client.distaz(stalat=station.latitude, stalon=station.longitude,
+                            evtlat=origin.latitude, evtlon=origin.longitude)
+
+        azimuth = res['azimuth']
+        back_azimuth = res['backazimuth']
+        # print("az=", azimuth, "ba=", back_azimuth)
+        distance_deg = res['distance']
+        distance_m = res['distancemeters']
+        stream = self.SGT2FKGF(sgt, azimuth, back_azimuth)
+        stream.id = station.id
+
+        # save FK-type Greens function into file.
+        if b_save and greens_path is not None:
+            chs = ['ZDD', 'RDD', 'TDD',
+                   'ZDS', 'RDS', 'TDS',
+                   'ZSS', 'RSS', 'TSS',
+                   'ZEP', 'REP', 'TEP']
+
+            fk_chs = ['0', '1', '2',
+                      '3', '4', '5',
+                      '6', '7', '8',
+                      'a', 'b', 'c']
+
+            for i, ch in enumerate(chs):
+                file_path = os.path.join(greens_path, "%d.grn.%s" % (distance_m/1000.0, fk_chs[i]))
+                stream.select(channel="%s" % ch).write(file_path, format='SAC')
+
         return stream
 
 
@@ -188,8 +250,13 @@ class DSGTMgr(DPointCloud):
         '''
 
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
-        (distance, azimuth, back_azimuth) = gps2dist_azimuth(station.latitude, station.longitude,
-                                                             origin.latitude, origin.longitude)
+        client = Client()
+        res = client.distaz(stalat=station.latitude, stalon=station.longitude,
+                            evtlat=origin.latitude, evtlon=origin.longitude)
+        back_azimuth = res['backazimuth']
+        distance_deg = res['distance']
+        distance_m = res['distancemeters']
+
         # synthetic
         element='SY'
         mt_enz = RTP_to_DENZ(mt_RTP)
@@ -219,3 +286,61 @@ class DSGTMgr(DPointCloud):
             stream += _st
         return stream
 
+
+    def SGT2FKGF(self, sgt, azi, ba):
+        '''Generate fk-type Green's functions. [*.0-8] from DC, [*.a-c] from EP.'''
+        # Fundamental faults:
+        # EP: Explosion source
+        # DD: 45-degree-dip slip
+        # DS: Vertical dip slip
+        # SS: vertical strike slip
+
+        # calculate the moment tensor (ENZ) of fundamental faults (EXP, DD, DS, SS)
+        strike = np.mod(azi + 270, 360)
+        dip_arr = np.array([45, 90, 90])
+        rake_arr = np.array([90, 90, 0])
+        colatitude, lune_longitude = 90, 0
+        mt_enz_ff = []
+        _mt_EXP = 1/np.sqrt(3) * np.array([1, 1, 1, 0, 0, 0])  # EP
+        mt_enz_ff.append(_mt_EXP)
+
+        # DD, DS, SS
+        for i in range(3):
+            _mt_enz = DMT_enz(np.deg2rad(strike), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
+                              np.deg2rad(colatitude), np.deg2rad(lune_longitude))
+            _mt_enz[3:] *= 2
+            _mt_enz = _mt_enz / np.linalg.norm(_mt_enz)
+            _mt_enz[3:] /= 2
+            _mt_enz = np.round(_mt_enz, 6)
+            mt_enz_ff.append(_mt_enz)
+        mt_enz_ff = np.asarray(mt_enz_ff)
+        scaling = np.array([
+            [1, 1, 0],
+            [1, 1, 0],
+            [1, 1, -1],
+            [1, 1, -1],
+        ])
+
+        # scaling after Comparing with Zhu, Lupei's Greens function.
+        scaling = 1E15 * 3.0 * scaling
+
+        stream = Stream()
+        for i, mt_enz in enumerate(mt_enz_ff):
+            _st = DSyn(mt_enz, sgt, FF_ELEMENT[i])
+            _st.rotate(method='NE->RT', back_azimuth=ba)
+            for _tr in _st:
+                ch = _tr.stats.channel
+                if ch[-1] == 'Z':
+                    _tr.data *= scaling[i][0]
+                elif ch[-1] == 'R':
+                    _tr.data *= scaling[i][1]
+                elif ch[-1] == 'T':
+                    _tr.data *= scaling[i][2]
+
+                _tr.stats.channel = '%s%s' % (ch[-1], ch[1:3])
+                _tr.stats._component = ch[-1]
+                _tr.stats.delta = self.dt
+                _tr.stats.sampling_rate = int(1.0 / self.dt)
+
+            stream += _st
+        return stream
