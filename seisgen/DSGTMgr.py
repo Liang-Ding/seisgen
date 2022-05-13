@@ -14,8 +14,12 @@ from seisgen.util_SPECFEM3D.ibool_reader import DEnquire_Element
 from seisgen.util_SPECFEM3D.xyz_reader import DEnquire_XYZ_GLLs_Element
 from seisgen.sgt.sgt_reader import DEnquire_SGT, read_header_info
 from seisgen.math.interp_tools import DCreate_anchors_xi_eta_gamma, DLagrange_interp_sgt, DLagrange_any3D
+
+from obspy.core.util.attribdict import AttribDict
 from obspy.core import Stream
 from obspy.clients.iris import Client
+from obspy.taup import TauPyModel
+
 import numpy as np
 
 import time
@@ -215,6 +219,43 @@ class DSGTMgr(DPointCloud):
         stream = self.SGT2FKGF(sgt, azimuth, back_azimuth)
         stream.id = station.id
 
+        # Add SAC header
+        b_sacHdeader = True
+        try:
+            depth_src_km = origin.depth_in_m / 1000.0
+        except:
+            b_sacHdeader = False
+
+        if b_sacHdeader:
+            model = TauPyModel(model="ak135")
+            try:
+                arrivals = model.get_travel_times(source_depth_in_km=depth_src_km,
+                                                  distance_in_degree=distance_deg,
+                                                  phase_list=["p", "s"])
+                # print("arrivals=", arrivals)
+                sac = AttribDict()
+                sac.o = 0.
+                sac.dist, sac.az, sac.baz = distance_m / 1000, azimuth, back_azimuth
+                sac.stla = station.latitude
+                sac.stlo = station.longitude
+                sac.evla = origin.latitude
+                sac.evlo = origin.longitude
+                sac.evdp = depth_src_km  # in km
+                sac.b = 0.0
+                try:
+                    sac.t1 = arrivals[0].time
+                except:
+                    pass
+                try:
+                    sac.t2 = arrivals[1].time
+                except:
+                    pass
+
+                for tr in stream.traces:
+                    tr.stats.sac = sac
+            except:
+                pass
+
         # save FK-type Greens function into file.
         if b_save and greens_path is not None:
             chs = ['ZDD', 'RDD', 'TDD',
@@ -301,7 +342,7 @@ class DSGTMgr(DPointCloud):
         rake_arr = np.array([90, 90, 0])
         colatitude, lune_longitude = 90, 0
         mt_enz_ff = []
-        _mt_EXP = 1/np.sqrt(3) * np.array([1, 1, 1, 0, 0, 0])  # EP
+        _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
         mt_enz_ff.append(_mt_EXP)
 
         # DD, DS, SS
@@ -309,20 +350,18 @@ class DSGTMgr(DPointCloud):
             _mt_enz = DMT_enz(np.deg2rad(strike), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
                               np.deg2rad(colatitude), np.deg2rad(lune_longitude))
             _mt_enz[3:] *= 2
-            _mt_enz = _mt_enz / np.linalg.norm(_mt_enz)
-            _mt_enz[3:] /= 2
-            _mt_enz = np.round(_mt_enz, 6)
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
         scaling = np.array([
             [1, 1, 0],
-            [1, 1, 0],
-            [1, 1, -1],
-            [1, 1, -1],
+            [2, 2, 0],
+            [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
+            [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
         ])
 
         # scaling after Comparing with Zhu, Lupei's Greens function.
-        scaling = 1E15 * 3.0 * scaling
+        # m -> cm
+        scaling = 1E15 * 1E2 * scaling
 
         stream = Stream()
         for i, mt_enz in enumerate(mt_enz_ff):
