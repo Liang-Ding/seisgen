@@ -213,7 +213,6 @@ class DSGTMgr(DPointCloud):
 
         azimuth = res['azimuth']
         back_azimuth = res['backazimuth']
-        # print("az=", azimuth, "ba=", back_azimuth)
         distance_deg = res['distance']
         distance_m = res['distancemeters']
         stream = self.SGT2FKGF(sgt, azimuth, back_azimuth)
@@ -232,7 +231,6 @@ class DSGTMgr(DPointCloud):
                 arrivals = model.get_travel_times(source_depth_in_km=depth_src_km,
                                                   distance_in_degree=distance_deg,
                                                   phase_list=["p", "s"])
-                # print("arrivals=", arrivals)
                 sac = AttribDict()
                 sac.o = 0.
                 sac.dist, sac.az, sac.baz = distance_m / 1000, azimuth, back_azimuth
@@ -256,7 +254,11 @@ class DSGTMgr(DPointCloud):
             except:
                 pass
 
-        # save FK-type Greens function into file.
+        if b_save:
+            if not os.path.exists(greens_path):
+                os.makedirs(greens_path)
+
+        # save FK-type Greens function to files.
         if b_save and greens_path is not None:
             chs = ['ZDD', 'RDD', 'TDD',
                    'ZDS', 'RDS', 'TDS',
