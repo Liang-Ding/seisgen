@@ -269,7 +269,7 @@ class DSGTMgr(DPointCloud):
                       'a', 'b', 'c']
 
             for i, ch in enumerate(chs):
-                file_path = os.path.join(greens_path, "%d.grn.%s" % (distance_m/1000.0, fk_chs[i]))
+                file_path = os.path.join(greens_path, "%d.grn.%s" % (np.ceil(distance_m/1000.0), fk_chs[i]))
                 stream.select(channel="%s" % ch).write(file_path, format='SAC')
 
         return stream
