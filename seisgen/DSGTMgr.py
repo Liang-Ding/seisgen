@@ -16,7 +16,7 @@ from seisgen.sgt.sgt_reader import DEnquire_SGT, read_header_info
 from seisgen.math.interp_tools import DCreate_anchors_xi_eta_gamma, DLagrange_interp_sgt, DLagrange_any3D
 
 from obspy.core.util.attribdict import AttribDict
-from obspy.core import Stream
+from obspy.core import Stream, Trace
 from obspy.clients.iris import Client
 from obspy.taup import TauPyModel
 
@@ -183,9 +183,10 @@ class DSGTMgr(DPointCloud):
         res = client.distaz(stalat=station.latitude, stalon=station.longitude,
                             evtlat=origin.latitude, evtlon=origin.longitude)
         back_azimuth = res['backazimuth']
+        azimuth = res['azimuth']
         distance_deg = res['distance']
         distance_m = res['distancemeters']
-        stream = self.SGT2GF(sgt, back_azimuth)
+        stream = self.SGT2GF(sgt, azimuth, back_azimuth)
         stream.id = station.id
         return stream
 
@@ -311,25 +312,70 @@ class DSGTMgr(DPointCloud):
         return _st
 
 
-    def SGT2GF(self, sgt, ba):
-        '''Generate Green's Function (GF) from Strain Green's Tensor (SGT) database.'''
-        MTs_rtp = np.identity(6)
+    def SGT2GF(self, sgt, azi, ba):
+        '''
+        Get 3D MT Green's functions
+        ( USE - compatible with MTUQ)
+        '''
+
+        fk_grn_st = self.SGT2FKGF(sgt, azi, ba)
         stream = Stream()
 
-        for i, mt_rtp in enumerate(MTs_rtp):
-            mt_enz = RTP_to_DENZ(mt_rtp)
-            # Synthetic waveform in ENZ
-            _st = DSyn(mt_enz, sgt, MT_ELEMENTS[i], b_GF=True)
-            # Rotation (ENZ => RTZ)
-            _st.rotate(method='NE->RT', back_azimuth=ba)
-            for _tr in _st:
-                ch = _tr.stats.channel
-                _tr.stats.channel = '%s.%s' % (ch[-1], ch[:3])
-                _tr.stats._component = ch[-1]
-                _tr.stats.delta = self.dt
-                _tr.stats.sampling_rate = int(1.0/self.dt)
+        az = np.deg2rad(azi)
+        sa = np.sin(az)
+        ca = np.cos(az)
+        sa2 = np.sin(2.0*az)
+        ca2 = np.cos(2.0*az)
+        fk0 = fk_grn_st.select(channel='ZDD').traces[0].data
+        fk1 = fk_grn_st.select(channel='RDD').traces[0].data
+        fk2 = fk_grn_st.select(channel='TDD').traces[0].data
+        fk3 = fk_grn_st.select(channel='ZDS').traces[0].data
+        fk4 = fk_grn_st.select(channel='RDS').traces[0].data
+        fk5 = fk_grn_st.select(channel='TDS').traces[0].data
 
-            stream += _st
+        fk6 = fk_grn_st.select(channel='ZSS').traces[0].data
+        fk7 = fk_grn_st.select(channel='RSS').traces[0].data
+        fk8 = fk_grn_st.select(channel='TSS').traces[0].data
+        fk9 = fk_grn_st.select(channel='ZEP').traces[0].data
+        fk10 = fk_grn_st.select(channel='REP').traces[0].data
+        fk11 = fk_grn_st.select(channel='TEP').traces[0].data
+
+        # [a-r] = [0-17]
+        n_component = 18
+        npts = len(fk0)
+        mt = np.zeros([n_component, npts])
+        mt[0] = fk9 / 3. - fk0 / 6. - fk6 * ca2 / 2.
+        mt[1] = fk10 / 3. - fk1 / 6. - fk7 * ca2 / 2.
+        mt[2] = -1. * fk8 * sa2 / 2.
+        mt[3] = fk6 * sa2
+        mt[4] = fk7 * sa2
+        mt[5] = -1. * fk8 * ca2
+        mt[6] = -1. * fk3 * ca
+        mt[7] = -1. * fk4 * ca
+        mt[8] = -1. * fk5 * sa
+        mt[9] = fk9 / 3. - fk0 / 6. + fk6 * ca2 / 2.
+        mt[10] = fk10 / 3. - fk1 / 6. + fk7 * ca2 / 2.
+        mt[11] = -1. * mt[2]
+        mt[12] = fk3 * sa
+        mt[13] = fk4 * sa
+        mt[14] = -1. * fk5 * ca
+        mt[15] = (fk9 + fk0) / 3.0
+        mt[16] = (fk10 + fk1) / 3.0
+        mt[17] = np.zeros(npts)
+        grn_chs = ['Z.Mtt', 'R.Mtt', 'T.Mtt',
+                   'Z.Mtp', 'R.Mtp', 'T.Mtp',
+                   'Z.Mrt', 'R.Mrt', 'T.Mrt',
+                   'Z.Mpp', 'R.Mpp', 'T.Mpp',
+                   'Z.Mrp', 'R.Mrp', 'T.Mrp',
+                   'Z.Mrr', 'R.Mrr', 'T.Mrr']
+
+        for i in range(n_component):
+            _tr = Trace(mt[i])
+            _tr.stats.channel = grn_chs[i]
+            _tr.stats.delta = self.dt
+            _tr.stats.sampling_rate = int(1.0/self.dt)
+            stream.append(_tr)
+
         return stream
 
 
