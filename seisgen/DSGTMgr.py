@@ -186,7 +186,7 @@ class DSGTMgr(DPointCloud):
         azimuth = res['azimuth']
         distance_deg = res['distance']
         distance_m = res['distancemeters']
-        stream = self.SGT2GF(sgt, azimuth, back_azimuth)
+        stream = self._SGT2GF(sgt, azimuth, back_azimuth)
         stream.id = station.id
         return stream
 
@@ -216,7 +216,7 @@ class DSGTMgr(DPointCloud):
         back_azimuth = res['backazimuth']
         distance_deg = res['distance']
         distance_m = res['distancemeters']
-        stream = self.SGT2FKGF(sgt, azimuth, back_azimuth)
+        stream = self._SGT2FKGF(sgt, azimuth, back_azimuth)
         stream.id = station.id
 
         # Add SAC header
@@ -312,13 +312,14 @@ class DSGTMgr(DPointCloud):
         return _st
 
 
-    def SGT2GF(self, sgt, azi, ba):
+    def _SGT2GF(self, sgt, azi, ba, b_USE=True):
         '''
         Get 3D MT Green's functions
-        ( USE - compatible with MTUQ)
+        ( Up-South-East convention (USE) by default, which is compatible with MTUQ,
+        otherwise North-East-Down convention)
         '''
 
-        fk_grn_st = self.SGT2FKGF(sgt, azi, ba)
+        fk_grn_st = self._SGT2FKGF(sgt, azi, ba)
         stream = Stream()
 
         az = np.deg2rad(azi)
@@ -369,17 +370,33 @@ class DSGTMgr(DPointCloud):
                    'Z.Mrp', 'R.Mrp', 'T.Mrp',
                    'Z.Mrr', 'R.Mrr', 'T.Mrr']
 
-        for i in range(n_component):
-            _tr = Trace(mt[i])
-            _tr.stats.channel = grn_chs[i]
-            _tr.stats.delta = self.dt
-            _tr.stats.sampling_rate = int(1.0/self.dt)
-            stream.append(_tr)
+        scales = np.array([1, 1, 1,
+                           -1, -1, -1,
+                           1, 1, 1,
+                           1, 1, 1,
+                           -1, -1, -1,
+                           1, 1, 0])
 
+        if b_USE:
+            # Up - South - East convention
+            for i in range(n_component):
+                _tr = Trace(mt[i])
+                _tr.stats.channel = grn_chs[i]
+                _tr.stats.delta = self.dt
+                _tr.stats.sampling_rate = int(1.0/self.dt)
+                stream.append(_tr)
+        else:
+            # North - East - Down convention
+            for i in range(n_component):
+                _tr = Trace(mt[i] * scales[i])
+                _tr.stats.channel = grn_chs[i]
+                _tr.stats.delta = self.dt
+                _tr.stats.sampling_rate = int(1.0/self.dt)
+                stream.append(_tr)
         return stream
 
 
-    def SGT2FKGF(self, sgt, azi, ba):
+    def _SGT2FKGF(self, sgt, azi, ba):
         '''Generate fk-type Green's functions. [*.0-8] from DC, [*.a-c] from EP.'''
         # Fundamental faults:
         # EP: Explosion source
@@ -410,8 +427,8 @@ class DSGTMgr(DPointCloud):
             [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
         ])
 
-        # scaling after Comparing with Zhu, Lupei's Greens function.
-        scaling = 1E17 * scaling
+        # Unit: 10^-20 cm/(dyn.cm) --> 10^-22 m/(dyn.cm)
+        scaling = 1E2 * scaling
 
         stream = Stream()
         for i, mt_enz in enumerate(mt_enz_ff):
