@@ -454,7 +454,6 @@ class DSGTMgr(DPointCloud):
             [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
         ])
 
-        # Unit: 10^-20 cm/(dyn.cm) --> 10^-22 m/(dyn.cm)
         scaling = 1E2 * scaling
 
         stream = Stream()
