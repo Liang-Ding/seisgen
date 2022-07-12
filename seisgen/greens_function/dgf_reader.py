@@ -1,5 +1,6 @@
 # -------------------------------------------------------------------
-# Tools to read data form the Strain Green's tensor (SGT) database.
+# Tools to acquire Greens Function (the displacement, DGF)
+# from the 3D pre-stored receiver-side Greens function database
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
@@ -12,7 +13,7 @@ import zlib
 from seisgen.util_SPECFEM3D import SGT_ENCODING_LEVEL
 
 
-SGT_KEYS = [
+DGF_KEYS = [
     'index',
     'start',
     'length',
@@ -20,51 +21,54 @@ SGT_KEYS = [
     'scale',
 ]
 
-SGT_ATTRS = [
+DGF_ATTRS = [
     'ngll',
     'nstep',
     'nforce',
     'nparas',
     'dt',
     'nspec',
+    'nGLL_global',
+    'type',
 ]
 
 
-def read_header_info(header_path):
-    '''return the information path.'''
-    # load the information of SGT database.
+def read_DGF_header(header_path):
+    '''Acquire parameters in the header file. '''
+    # load the information of about the GF database.
     with h5py.File(header_path, 'r') as f:
-        dt      = f.attrs[SGT_ATTRS[4]]
-        NSPEC   = f.attrs[SGT_ATTRS[5]]
-    return dt, NSPEC
+        dt      = f.attrs[DGF_ATTRS[4]]
+        NSPEC   = f.attrs[DGF_ATTRS[5]]
+        nGLL_global = f.attrs[DGF_ATTRS[6]]
+    return dt, NSPEC, nGLL_global
 
 
-def DEnquire_SGT(data_path, header_path, g_indx_GLL_points):
+def DEnquire_DGF(data_path, header_path, g_indx_GLL_points):
     '''
-    * Enquire the SGT from the database (*.bin files).
+    * Enquire the GF from the database (*.bin files).
 
     :param data_path:           The path to the data file (.bin)
-    :param header_path:           The path to the header file (.hdf5)
+    :param header_path:         The path to the header file (.hdf5)
     :param g_indx_GLL_points:   The global index of the GLL points acquired in the slice.
-    :return:                    The list of SGT array acquired.
+    :return:                    The list of GF array acquired.
     '''
 
-    # load the information of SGT database.
     with h5py.File(header_path, 'r') as f:
-        names_GLL_arr       = f[SGT_KEYS[0]][:]
-        data_start_array    = f[SGT_KEYS[1]][:]
-        data_length_array   = f[SGT_KEYS[2]][:]
-        data_offset_array   = f[SGT_KEYS[3]][:]
-        data_scale_array    = f[SGT_KEYS[4]][:]
+        names_GLL_arr       = f[DGF_KEYS[0]][:]
+        data_start_array    = f[DGF_KEYS[1]][:]
+        data_length_array   = f[DGF_KEYS[2]][:]
+        data_offset_array   = f[DGF_KEYS[3]][:]
+        data_scale_array    = f[DGF_KEYS[4]][:]
 
-        n_gll   = f.attrs[SGT_ATTRS[0]]
-        n_step  = f.attrs[SGT_ATTRS[1]]
-        n_dim   = f.attrs[SGT_ATTRS[2]]
-        n_paras = f.attrs[SGT_ATTRS[3]]
-        dt      = f.attrs[SGT_ATTRS[4]]
-        NSPEC   = f.attrs[SGT_ATTRS[5]]
+        n_gll   = f.attrs[DGF_ATTRS[0]]
+        n_step  = f.attrs[DGF_ATTRS[1]]
+        n_dim   = f.attrs[DGF_ATTRS[2]]
+        n_paras = f.attrs[DGF_ATTRS[3]]
+        dt      = f.attrs[DGF_ATTRS[4]]
+        NSPEC   = f.attrs[DGF_ATTRS[5]]
+        nGLL_global = f.attrs[DGF_ATTRS[6]]
 
-    sgt_arr_list = []
+    dgf_arr_list = []
     with open(data_path, "rb") as fr:
         for gll in g_indx_GLL_points:
             idx_gll = (np.where(names_GLL_arr == gll))[0][0]
@@ -92,9 +96,9 @@ def DEnquire_SGT(data_path, header_path, g_indx_GLL_points):
             count = 0
             for j in range(n_dim):
                 for k in range(n_paras):
-                    unzip_sgt[:, j, k] = data[count * n_step:(count + 1) * n_step]
+                    unzip_sgt[:, k, j] = data[count * n_step:(count + 1) * n_step]
                     count += 1
 
-            sgt_arr_list.append(unzip_sgt)
+            dgf_arr_list.append(unzip_sgt)
 
-    return sgt_arr_list
+    return dgf_arr_list

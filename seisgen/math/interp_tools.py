@@ -97,7 +97,7 @@ def DLagrange_interp_sgt(h_xi_arr, h_eta_arr, h_gamma_arr, sgt_arr_list, ngll_x,
     :param sgt_arr_list: List of the SGT data on the selected GLL points. Typically 125 GLL points.
                     sgt_arr size: 125 * [n_step, 3, 6], where
                     * The 125 represents the number of GLL points in one element.
-                    * The sgt order = ibool.
+                    * The greens_function order = ibool.
                     * The n_step represents the number of the data for the database.
                     * The 3 represents the number of force.
                     * The 6 represents the number of the element in SGT.

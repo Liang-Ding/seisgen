@@ -12,7 +12,7 @@ from seisgen.util_SPECFEM3D import get_proc_name
 from seisgen.MTTools.DMomentTensors import DMT_enz
 from seisgen.util_SPECFEM3D.ibool_reader import DEnquire_Element
 from seisgen.util_SPECFEM3D.xyz_reader import DEnquire_XYZ_GLLs_Element
-from seisgen.sgt.sgt_reader import DEnquire_SGT, read_header_info
+from seisgen.greens_function.sgt_reader import DEnquire_SGT, read_header_info
 from seisgen.math.interp_tools import DCreate_anchors_xi_eta_gamma, DLagrange_interp_sgt, DLagrange_any3D
 
 from obspy.core.util.attribdict import AttribDict
@@ -117,15 +117,21 @@ class DSGTMgr(DPointCloud):
     def get_sgt(self, station, origin, b_new_origin=True, b_verbose=False):
         '''
         Get the interpolated SGT between the station-origin pair.
-        :param station: instance of the Station class in MTUQ.
-        :param origin:  the dict of origin.
-                        eg:  origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
+        :param station: An instance of the obspy AttribDict class. For example:
+                        station = AttribDict({ 'latitude': 34.0210,
+                                                'longitude': -118.287,
+                                                'network': 'CI',
+                                                'station': 'USC',
+                                                'location': '',
+                                                'id': 'USC'})
+
+        :param origin:  An instance of the obspy AttribDict class. For example:
+                        origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
                                               'latitude': 35.601333,
                                               'longitude': -117.597,
                                               'depth_in_m': 2810.0,
                                               'id': 'evt11056825'})
-
-        :param b_new_origin: Accelerating the extraction of SGT data for multiple stations with the same origin.
+        :param b_new_origin: True, If acquiring SGF at multiple stations for a same origin to save time.
         '''
 
         if b_verbose:
@@ -166,10 +172,17 @@ class DSGTMgr(DPointCloud):
 
     def get_greens_function(self, station, origin, b_new_origin=True):
         '''
-        Get Green's Function between the station-origin pair.
-        :param station: instance of the Station class in MTUQ.
-        :param origin:  the dict of origin.
-                        eg:  origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
+        Get Greens Function between the station-origin pair.
+        :param station: An instance of the obspy AttribDict class. For example:
+                        station = AttribDict({ 'latitude': 34.0210,
+                                                'longitude': -118.287,
+                                                'network': 'CI',
+                                                'station': 'USC',
+                                                'location': '',
+                                                'id': 'USC'})
+
+        :param origin:  An instance of the obspy AttribDict class. For example:
+                        origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
                                               'latitude': 35.601333,
                                               'longitude': -117.597,
                                               'depth_in_m': 2810.0,
@@ -193,10 +206,17 @@ class DSGTMgr(DPointCloud):
 
     def get_fk_greens_function(self, station, origin, b_new_origin=True, b_save=False, greens_path=None):
         '''
-        Get FK-type Green's Function between the station-origin pair.
-        :param station: instance of the Station class in MTUQ.
-        :param origin:  the dict of origin.
-                        eg:  origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
+        Get FK-type Greens Function between the station-origin pair.
+        :param station: An instance of the obspy AttribDict class. For example:
+                        station = AttribDict({ 'latitude': 34.0210,
+                                                'longitude': -118.287,
+                                                'network': 'CI',
+                                                'station': 'USC',
+                                                'location': '',
+                                                'id': 'USC'})
+
+        :param origin:  An instance of the obspy AttribDict class. For example:
+                        origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
                                               'latitude': 35.601333,
                                               'longitude': -117.597,
                                               'depth_in_m': 2810.0,
@@ -204,7 +224,7 @@ class DSGTMgr(DPointCloud):
 
         :param b_new_origin: Accelerating the extraction of SGT data for multiple stations with the same origin.
         :param b_save:  Whether to save the greens function to file?
-        :para greens_path: the path to store the Green's function
+        :para greens_path: the path to store the Greens function
         '''
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
 
@@ -281,9 +301,16 @@ class DSGTMgr(DPointCloud):
     def get_waveform(self, station, origin, mt_RTP, b_new_origin=True):
         '''
         Return the synthetic 3-C waveform in RTZ.
-        :param station: instance of the Station class in MTUQ.
-        :param origin:  the dict of origin.
-                        eg:  origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
+        :param station: An instance of the obspy AttribDict class. For example:
+                        station = AttribDict({ 'latitude': 34.0210,
+                                                'longitude': -118.287,
+                                                'network': 'CI',
+                                                'station': 'USC',
+                                                'location': '',
+                                                'id': 'USC'})
+
+        :param origin:  An instance of the obspy AttribDict class. For example:
+                        origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
                                               'latitude': 35.601333,
                                               'longitude': -117.597,
                                               'depth_in_m': 2810.0,
@@ -314,7 +341,7 @@ class DSGTMgr(DPointCloud):
 
     def _SGT2GF(self, sgt, azi, ba, b_USE=True):
         '''
-        Get 3D MT Green's functions
+        Get 3D MT Greens functions
         ( Up-South-East convention (USE) by default, which is compatible with MTUQ,
         otherwise North-East-Down convention)
         '''
@@ -397,7 +424,7 @@ class DSGTMgr(DPointCloud):
 
 
     def _SGT2FKGF(self, sgt, azi, ba):
-        '''Generate fk-type Green's functions. [*.0-8] from DC, [*.a-c] from EP.'''
+        '''Generate fk-type Greens functions. [*.0-8] from DC, [*.a-c] from EP.'''
         # Fundamental faults:
         # EP: Explosion source
         # DD: 45-degree-dip slip
