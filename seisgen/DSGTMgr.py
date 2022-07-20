@@ -447,15 +447,14 @@ class DSGTMgr(DPointCloud):
             _mt_enz[3:] *= 2
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
+        sqrt2 = np.sqrt(2)
         scaling = np.array([
-            [1, 1, 0],
-            [2, 2, 0],
-            [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
-            [np.sqrt(2), np.sqrt(2), -np.sqrt(2)],
+            [1.0/sqrt2, 1.0/sqrt2, 0],
+            [sqrt2, sqrt2, 0],
+            [1, 1, -1],
+            [1, 1, -1],
         ])
-
         scaling = 1E2 * scaling
-
         stream = Stream()
         for i, mt_enz in enumerate(mt_enz_ff):
             _st = DSyn(mt_enz, sgt, FF_ELEMENT[i])
