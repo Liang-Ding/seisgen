@@ -26,7 +26,7 @@ The seisgen package requires the following database to work:
 * The 3D background model utilized to create the SGT database 
 * The HDF5 file storing the locations and interpolation parameters of the points within the 3D model. 
 
-## Example of usage with the SGT database
+## Example of using the SGT database
 * Initialize an instance of the data manager:
 ```shell
 mgr = DSGTMgr(sgt_database_folder, model3D_folder, point_cloud_file)
@@ -47,7 +47,7 @@ greens = mgr.get_fk_greens_function(station, origin)
 stream = mgr.get_waveform(station, origin, mt_RTP)
 ```
 
-## Example of usage with the DGF database
+## Example of using the DGF database
 * Initialize an instance of the data manager:
 ```shell
 mgr = DDGFMgr(sgt_database_folder, model3D_folder, point_cloud_file)
