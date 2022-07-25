@@ -40,7 +40,7 @@ def DSyn(mt, sgt, element, b_GF=False):
     stream = Stream()
     channels = ['N', 'E', 'Z']
     for i in range(n_force):
-        trace = Trace(np.dot(sgt[:, i, :], mt))
+        trace = Trace(np.dot(sgt[:, i, :], new_mt))
         trace.stats.channel = str(element)+str(channels[i])
         stream.append(trace)
     return stream
