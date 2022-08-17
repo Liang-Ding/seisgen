@@ -1,7 +1,10 @@
 # SEISGEN
-![SEISGEN](https://github.com/Liang-Ding/seisgen/blob/main/doc/figs/seisgen.png)
 
 [![DOI](https://zenodo.org/badge/430866912.svg)](https://zenodo.org/badge/latestdoi/430866912)
+
+
+![SEISGEN](https://github.com/Liang-Ding/seisgen/blob/main/doc/figs/seisgen.png)
+
 
 SEISGEN is a python package to acquire and generate the Greens function and synthetic waveform from the stored receiver-side 3D database including the Strain Greens Tensor (SGT) database and the (displacement) Greens function (DGF) database. 
 The Greens function and synthetic waveform could be utilized by inversion packages such as [pyCAPLunar](https://github.com/Liang-Ding/pyCAPLunar), MTUQ and gCAP-series packages to determine the parameters of single-point sources including the moment tensor and force and finite fault models. 
