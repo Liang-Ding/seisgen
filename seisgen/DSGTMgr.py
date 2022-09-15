@@ -117,6 +117,7 @@ class DSGTMgr(DPointCloud):
     def get_sgt(self, station, origin, b_new_origin=True, b_verbose=False):
         '''
         Get the interpolated SGT between the station-origin pair.
+        Unit: m/N.m
         :param station: An instance of the obspy AttribDict class. For example:
                         station = AttribDict({ 'latitude': 34.0210,
                                                 'longitude': -118.287,
@@ -173,6 +174,8 @@ class DSGTMgr(DPointCloud):
     def get_greens_function(self, station, origin, b_new_origin=True):
         '''
         Get Greens Function between the station-origin pair.
+        Unit: m/N.m
+
         :param station: An instance of the obspy AttribDict class. For example:
                         station = AttribDict({ 'latitude': 34.0210,
                                                 'longitude': -118.287,
@@ -207,6 +210,8 @@ class DSGTMgr(DPointCloud):
     def get_fk_greens_function(self, station, origin, b_new_origin=True, b_save=False, greens_path=None):
         '''
         Get FK-type Greens Function between the station-origin pair.
+        Unit: m/N.m
+
         :param station: An instance of the obspy AttribDict class. For example:
                         station = AttribDict({ 'latitude': 34.0210,
                                                 'longitude': -118.287,
@@ -301,6 +306,8 @@ class DSGTMgr(DPointCloud):
     def get_waveform(self, station, origin, mt_RTP, b_new_origin=True):
         '''
         Return the synthetic 3-C waveform in RTZ.
+        Unit: m
+
         :param station: An instance of the obspy AttribDict class. For example:
                         station = AttribDict({ 'latitude': 34.0210,
                                                 'longitude': -118.287,
