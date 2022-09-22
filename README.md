@@ -13,7 +13,7 @@ The 3D Greens function database is created by using the [SPECFEM3D_Cartesian sof
 
 ## Citation
 ```text
-Liang Ding, 2022, SEISGEN Ver 0.1.1. Source code. https://www.github.com/Liang-Ding/seisgen. doi:10.5281/zenodo.7003857
+Liang Ding, 2022, SEISGEN Ver 0.1.3. Source code. https://www.github.com/Liang-Ding/seisgen. doi:10.5281/zenodo.7003857
 ```
 ```text
 @misc{Ding_seisgen,
