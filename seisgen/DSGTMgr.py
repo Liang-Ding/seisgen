@@ -439,27 +439,27 @@ class DSGTMgr(DPointCloud):
         # SS: vertical strike slip
 
         # calculate the moment tensor (ENZ) of fundamental faults (EXP, DD, DS, SS)
-        strike = np.mod(azi + 270, 360)
+        mt_enz_ff = []
+        strike = [np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-67.5]
         dip_arr = np.array([45, 90, 90])
         rake_arr = np.array([90, 90, 0])
         colatitude, lune_longitude = 90, 0
-        mt_enz_ff = []
         _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
         mt_enz_ff.append(_mt_EXP)
 
         # DD, DS, SS
         for i in range(3):
-            _mt_enz = DMT_enz(np.deg2rad(strike), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
+            _mt_enz = DMT_enz(np.deg2rad(strike[i]), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
                               np.deg2rad(colatitude), np.deg2rad(lune_longitude))
             _mt_enz[3:] *= 2
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
         sqrt2 = np.sqrt(2)
         scaling = np.array([
-            [1.0/sqrt2, 1.0/sqrt2, 0],
-            [sqrt2, sqrt2, 0],
-            [1, 1, -1],
-            [1, 1, -1],
+            [1, 1, 0],
+            [2, 2, 0],
+            [sqrt2, sqrt2, sqrt2],
+            [sqrt2, sqrt2, sqrt2],
         ])
         scaling = 1E2 * scaling
         stream = Stream()
