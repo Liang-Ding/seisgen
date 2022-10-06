@@ -21,6 +21,7 @@ from obspy.clients.iris import Client
 from obspy.taup import TauPyModel
 
 import numpy as np
+import pandas as pd
 
 import time
 
@@ -438,47 +439,46 @@ class DSGTMgr(DPointCloud):
         # DS: Vertical dip slip
         # SS: vertical strike slip
 
-        # calculate the moment tensor (ENZ) of fundamental faults (EXP, DD, DS, SS)
-        mt_enz_ff = []
-        strike = [np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-67.5]
-        dip_arr = np.array([45, 90, 90])
-        rake_arr = np.array([90, 90, 0])
-        colatitude, lune_longitude = 90, 0
-        _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
-        mt_enz_ff.append(_mt_EXP)
+        scaling = 1E2  # SGT-FKGF <- 1E2 -> FKGF
+        items = [
+        ("TSS", 'm1', "T", -1),
+        ("ZSS", 'm2', "Z", 1),
+        ("RSS", 'm2', "R", 1),
+        ("TDS", 'm3', "T", -1),
+        ("ZDS", 'm4', "Z", 1),
+        ("RDS", 'm4', "R", 1),
+        ("TDD", 'cl', "T", 0),
+        ("ZDD", 'cl', "Z", 1),
+        ("RDD", 'cl', "R", 1),
+        ("TEP", 'm6', "T", 0),
+        ("ZEP", 'm6', "Z", 1),
+        ("REP", 'm6', "R", 1)]
 
-        # DD, DS, SS
-        for i in range(3):
-            _mt_enz = DMT_enz(np.deg2rad(strike[i]), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
-                              np.deg2rad(colatitude), np.deg2rad(lune_longitude))
-            _mt_enz[3:] *= 2
-            mt_enz_ff.append(_mt_enz)
-        mt_enz_ff = np.asarray(mt_enz_ff)
-        sqrt2 = np.sqrt(2)
-        scaling = np.array([
-            [1, 1, 0],
-            [2, 2, 0],
-            [sqrt2, sqrt2, sqrt2],
-            [sqrt2, sqrt2, sqrt2],
-        ])
-        scaling = 1E2 * scaling
+        mtff_rtp_df = pd.DataFrame({
+            "m1": np.array([0,    0,    0,    0,   0,    -1]),
+            "m2": np.array([0,    1.0, -1.0,  0,   0,    0]),
+            "m3": np.array([0,    0,   0,     0,  -1.0,  0]),
+            "m4": np.array([0,    0,   0,     1.0, 0,    0]),
+            "m6": np.array([1,    1,   1,     0,   0,    0]),
+            "cl": np.array([2.0, -1.0, -1.0,  0,   0,    0]),
+        })
+
         stream = Stream()
-        for i, mt_enz in enumerate(mt_enz_ff):
-            _st = DSyn(mt_enz, sgt, FF_ELEMENT[i])
+        for name, src, comp, scale in items:
+            mt_enz = RTP_to_DENZ(mtff_rtp_df[src].values)
+            mt_enz[3:] *= 2
+
+            _st = DSyn(mt_enz, sgt, element='SYN')
             _st.rotate(method='NE->RT', back_azimuth=ba)
             for _tr in _st:
                 ch = _tr.stats.channel
-                if ch[-1] == 'Z':
-                    _tr.data *= scaling[i][0]
-                elif ch[-1] == 'R':
-                    _tr.data *= scaling[i][1]
-                elif ch[-1] == 'T':
-                    _tr.data *= scaling[i][2]
-
-                _tr.stats.channel = '%s%s' % (ch[-1], ch[1:3])
-                _tr.stats._component = ch[-1]
-                _tr.stats.delta = self.dt
-                _tr.stats.sampling_rate = int(1.0 / self.dt)
+                if ch[-1] == comp:
+                    _tr.data *= (scale * scaling)
+                    _tr.stats.channel = name
+                    _tr.stats.delta = self.dt
+                    _tr.stats.sampling_rate = int(1.0 / self.dt)
+                    stream.append(_tr)
+                    break
 
             stream += _st
         return stream
