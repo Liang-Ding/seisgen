@@ -24,7 +24,7 @@ import time
 class DDGFMgr(DPointCloud):
     '''Greens Function (Displacement, DGF) database Manager'''
 
-    def __init__(self, dgf_database_folder, model3D_folder, point_cloud_file):
+    def __init__(self, dgf_database_folder, model3D_folder, point_cloud_file, DLite=False):
         '''
         :param dgf_database_folder:     The directory to the greens function database.
         :param model3D_folder:          The directory to the 3D background model.
@@ -38,7 +38,10 @@ class DDGFMgr(DPointCloud):
         self.NSPEC = 0
         self.nGLL_global = 0
         # initial parameters of the GF database.
-        self.__initial_paras()
+        if DLite:
+            pass
+        else:
+            self.__initial_paras()
         super().__init__(point_cloud_file)
 
     def __initial_paras(self):
@@ -94,6 +97,14 @@ class DDGFMgr(DPointCloud):
 
         self.dgf_interp = DLagrange_interp_sgt(h_xi_arr, h_eta_arr, h_gamma_arr, self.dgfs,
                                                ngll_x=ngll_x, ngll_y=ngll_y, ngll_z=ngll_z)
+
+    def set_dt(self, dt):
+        '''
+        Set time interval.
+        Function observed for SeisClient.
+        '''
+        self.dt = dt
+        return self
 
     def get_dgf(self, station, origin, b_new_origin=True, b_verbose=False):
         '''
@@ -176,10 +187,10 @@ class DDGFMgr(DPointCloud):
         '''
 
         greens = self.get_dgf(station, origin, b_new_origin=b_new_origin)
-        return self.get_greens_function_next(greens, station, origin)
+        return self.get_greens_function_next(greens, station)
 
 
-    def get_greens_function_next(self, greens, station, origin):
+    def get_greens_function_next(self, greens, station):
         ''' The next step of get_greens_function()'''
         _, n_force, n_chans = np.shape(greens)
         element_order = ['E', 'N', 'Z']

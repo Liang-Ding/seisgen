@@ -45,7 +45,7 @@ FF_ELEMENT = [
 class DSGTMgr(DPointCloud):
     '''Strain Green's Tensor (SGT) database Manager'''
 
-    def __init__(self, sgt_database_folder, model3D_folder, point_cloud_file):
+    def __init__(self, sgt_database_folder, model3D_folder, point_cloud_file, DLite=False):
         '''
         :param sgt_database_folder:     The directory to the SGT database.
         :param model3D_folder:          The directory to the 3D background model.
@@ -58,7 +58,10 @@ class DSGTMgr(DPointCloud):
         self.dt                  = 0
         self.NSPEC               = 0
         # initial parameters of the SGT database.
-        self.__initial_paras()
+        if DLite:
+            pass
+        else:
+            self.__initial_paras()
         super().__init__(point_cloud_file)
 
     def __initial_paras(self):
@@ -94,7 +97,7 @@ class DSGTMgr(DPointCloud):
     def _initial_SGTs_N_station(self):
         '''Return the SGT between origin and station. '''
         dir_string = os.path.join(str(self.sgt_database_folder),
-                                     # str(self.station.network),
+                                     str(self.station.network),
                                      str(self.station.station),
                                      str(self.proc_name))
         sgt_data_path = dir_string + str("_sgt_data.bin")
@@ -112,6 +115,13 @@ class DSGTMgr(DPointCloud):
 
         self.sgt_interp = DLagrange_interp_sgt(h_xi_arr, h_eta_arr, h_gamma_arr, self.sgts,
                                           ngll_x=ngll_x, ngll_y=ngll_y, ngll_z=ngll_z)
+
+    def set_dt(self, dt):
+        '''
+        Set time interval.
+        Function observed for SeisClient.
+        '''
+        self.dt = dt
 
 
     def get_sgt(self, station, origin, b_new_origin=True, b_verbose=False):
