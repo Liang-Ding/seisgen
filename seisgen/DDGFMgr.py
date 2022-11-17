@@ -176,6 +176,11 @@ class DDGFMgr(DPointCloud):
         '''
 
         greens = self.get_dgf(station, origin, b_new_origin=b_new_origin)
+        return self.get_greens_function_next(greens, station, origin)
+
+
+    def get_greens_function_next(self, greens, station, origin):
+        ''' The next step of get_greens_function()'''
         _, n_force, n_chans = np.shape(greens)
         element_order = ['E', 'N', 'Z']
         st = Stream()
@@ -222,6 +227,12 @@ class DDGFMgr(DPointCloud):
         '''
 
         greens = self.get_dgf(station, origin, b_new_origin=b_new_origin)
+        return self.get_waveform_next(greens, station, origin, force_enz, b_RTZ)
+
+
+    def get_waveform_next(self, greens, station, origin, force_enz, b_RTZ=False):
+        ''' The next step of get_waveform()'''
+
         syn_enz = np.matmul(greens, force_enz).transpose()
         n_chans = 3
         channel_order = ['E', 'N', 'Z']

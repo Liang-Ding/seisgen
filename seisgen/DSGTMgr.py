@@ -195,6 +195,11 @@ class DSGTMgr(DPointCloud):
         '''
 
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
+        return self.get_greens_function_next(sgt, station, origin, b_new_origin)
+
+
+    def get_greens_function_next(self, sgt, station, origin):
+        '''The next step of get_greens_function()'''
         client = Client()
         res = client.distaz(stalat=station.latitude, stalon=station.longitude,
                             evtlat=origin.latitude, evtlon=origin.longitude)
@@ -232,6 +237,11 @@ class DSGTMgr(DPointCloud):
         :para greens_path: the path to store the Greens function
         '''
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
+        return self.get_fk_greens_function_next(sgt, station, origin, b_save, greens_path)
+
+
+    def get_fk_greens_function_next(self, sgt, station, origin, b_save=False, greens_path=None):
+        '''The next step of get_fk_greens_function()'''
 
         client = Client()
         res = client.distaz(stalat=station.latitude, stalon=station.longitude,
@@ -328,6 +338,12 @@ class DSGTMgr(DPointCloud):
         '''
 
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
+        return self.get_waveform_next(sgt, station, origin, mt_RTP)
+
+
+    def get_waveform_next(self, sgt, station, origin, mt_RTP):
+        '''The next step of get_waveform()'''
+
         client = Client()
         res = client.distaz(stalat=station.latitude, stalon=station.longitude,
                             evtlat=origin.latitude, evtlon=origin.longitude)
