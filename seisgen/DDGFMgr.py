@@ -106,6 +106,7 @@ class DDGFMgr(DPointCloud):
         self.dt = dt
         return self
 
+
     def get_dgf(self, station, origin, b_new_origin=True, b_verbose=False):
         '''
         Get the interpolated GF between the station-origin pair.

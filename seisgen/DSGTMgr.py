@@ -122,6 +122,7 @@ class DSGTMgr(DPointCloud):
         Function observed for SeisClient.
         '''
         self.dt = dt
+        return self
 
 
     def get_sgt(self, station, origin, b_new_origin=True, b_verbose=False):
