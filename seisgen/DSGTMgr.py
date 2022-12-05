@@ -324,7 +324,7 @@ class DSGTMgr(DPointCloud):
         return stream
 
 
-    def get_waveform(self, station, origin, mt_RTP, b_new_origin=True):
+    def get_waveform(self, station, origin, mt_RTP, b_RTZ=False, b_new_origin=True):
         '''
         Return the synthetic 3-C waveform in RTZ.
         Unit: m
@@ -349,10 +349,10 @@ class DSGTMgr(DPointCloud):
         '''
 
         sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
-        return self.get_waveform_next(sgt, station, origin, mt_RTP)
+        return self.get_waveform_next(sgt, station, origin, mt_RTP, b_RTZ)
 
 
-    def get_waveform_next(self, sgt, station, origin, mt_RTP):
+    def get_waveform_next(self, sgt, station, origin, mt_RTP, b_RTZ=False):
         '''The next step of get_waveform()'''
 
         client = Client()
@@ -366,10 +366,13 @@ class DSGTMgr(DPointCloud):
         element='SY'
         mt_enz = RTP_to_DENZ(mt_RTP)
         _st = DSyn(mt_enz, sgt, element)
-        for _tr in _st:
-            _tr.stats.delta = self.dt
-            _tr.stats.sampling_rate = int(1.0 / self.dt)
-        _st.rotate(method='NE->RT', back_azimuth=back_azimuth)
+
+        # waveform in ENZ or RTZ convention
+        if b_RTZ:
+            for _tr in _st:
+                _tr.stats.delta = self.dt
+                _tr.stats.sampling_rate = int(1.0 / self.dt)
+            _st.rotate(method='NE->RT', back_azimuth=back_azimuth)
         return _st
 
 

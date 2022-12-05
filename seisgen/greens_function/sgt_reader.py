@@ -82,7 +82,7 @@ def DEnquire_SGT(data_path, header_path, g_indx_GLL_points):
             # uncompress the data to bytes.
             data = zlib.decompress(data)
 
-            # recover bytes to uint16
+            # recover bytes to uint8
             data = np.frombuffer(data, dtype=np.uint8)
 
             # recover waveform
