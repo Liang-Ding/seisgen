@@ -366,12 +366,12 @@ class DSGTMgr(DPointCloud):
         element='SY'
         mt_enz = RTP_to_DENZ(mt_RTP)
         _st = DSyn(mt_enz, sgt, element)
+        for _tr in _st:
+            _tr.stats.delta = self.dt
+            _tr.stats.sampling_rate = int(1.0 / self.dt)
 
         # waveform in ENZ or RTZ convention
         if b_RTZ:
-            for _tr in _st:
-                _tr.stats.delta = self.dt
-                _tr.stats.sampling_rate = int(1.0 / self.dt)
             _st.rotate(method='NE->RT', back_azimuth=back_azimuth)
         return _st
 
