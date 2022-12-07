@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------
 # Acquire the waveform from the
-# from the 3D pre-stored receiver-side strain Greens function database
+# pre-stored 3D receiver-side strain Greens function database
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
@@ -47,4 +47,3 @@ def acquire_waveform():
 
 if __name__ == '__main__':
     acquire_waveform()
-
