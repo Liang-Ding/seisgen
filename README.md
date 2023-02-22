@@ -11,22 +11,6 @@ The Greens function and synthetic waveform could be utilized by inversion packag
 
 The 3D Greens function database is created by using the [SPECFEM3D_Cartesian software](https://geodynamics.org/resources/specfem3dcartesian) and [the python script](https://github.com/Liang-Ding/pyCAPLunar/blob/master/DSEM_Utils/merge_strainfield.py) in the project [pyCAPLunar](https://github.com/Liang-Ding/pyCAPLunar).
 
-## Citation
-```text
-Liang Ding, 2022, SEISGEN Ver 0.1.3. Source code. https://www.github.com/Liang-Ding/seisgen. doi:10.5281/zenodo.7003857
-```
-```text
-@misc{Ding_seisgen,
-title = {Seisgen, Ver 0.1.1},
-author = {Ding, Liang},
-abstractNote = {SEISGEN is a python package to acquire and generate the Greens function and synthetic waveform from the stored receiver-side 3D database including the Strain Greens Tensor (SGT) database and the (displacement) Greens function (DGF) database.},
-url = {https://www.github.com/Liang-Ding/seisgen},
-doi = {10.5281/zenodo.7003857}, 
-year = {2022},
-month = {Aug},
-}
-```
-
 
 ## Installation
 For basic install:
