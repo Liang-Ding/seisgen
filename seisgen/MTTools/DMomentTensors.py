@@ -51,4 +51,4 @@ def DMT_enz(strike, dip, rake, colatitude, longitude):
     mt_enz[4] = -1.0 * mt_nwz[1][2]
     mt_enz[5] = mt_nwz[0][2]
 
-    return mt_enz
+    return mt_enz * np.sqrt(2)

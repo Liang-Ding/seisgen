@@ -481,15 +481,15 @@ class DSGTMgr(DPointCloud):
         for i in range(3):
             _mt_enz = DMT_enz(np.deg2rad(strike[i]), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
                               np.deg2rad(colatitude), np.deg2rad(lune_longitude))
-            _mt_enz[3:] *= 2
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
+
         sqrt2 = np.sqrt(2)
         scaling = np.array([
-            [1, 1, 0],
-            [2, 2, 0],
-            [sqrt2, sqrt2, sqrt2],
-            [sqrt2, sqrt2, sqrt2],
+            [1/sqrt2, 1/sqrt2, 0],
+            [sqrt2, sqrt2, 0],
+            [1, 1, 1],
+            [1, 1, 1],
         ])
 
         stream = Stream()
