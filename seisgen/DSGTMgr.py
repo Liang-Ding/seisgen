@@ -474,13 +474,13 @@ class DSGTMgr(DPointCloud):
         dip_arr = np.array([45, 90, 90])
         rake_arr = np.array([90, 90, 0])
         colatitude, lune_longitude = 90, 0
-        _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
+        _mt_EXP = np.array([0.57735027, 0.57735027, 0.57735027, 0, 0, 0])  # EP
         mt_enz_ff.append(_mt_EXP)
 
         # DD, DS, SS
         for i in range(3):
-            _mt_enz = DMT_enz(np.deg2rad(strike[i]), np.deg2rad(dip_arr[i]), np.deg2rad(rake_arr[i]),
-                              np.deg2rad(colatitude), np.deg2rad(lune_longitude))
+            _mt_enz = DMT_enz(strike[i], dip_arr[i], rake_arr[i],
+                              colatitude, lune_longitude)
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
 
