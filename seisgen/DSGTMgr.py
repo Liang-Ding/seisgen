@@ -474,7 +474,7 @@ class DSGTMgr(DPointCloud):
         dip_arr = np.array([45, 90, 90])
         rake_arr = np.array([90, 90, 0])
         colatitude, lune_longitude = 90, 0
-        _mt_EXP = np.array([0.57735027, 0.57735027, 0.57735027, 0, 0, 0])  # EP
+        _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
         mt_enz_ff.append(_mt_EXP)
 
         # DD, DS, SS
@@ -483,13 +483,12 @@ class DSGTMgr(DPointCloud):
                               colatitude, lune_longitude)
             mt_enz_ff.append(_mt_enz)
         mt_enz_ff = np.asarray(mt_enz_ff)
-
         sqrt2 = np.sqrt(2)
         scaling = np.array([
-            [1/sqrt2, 1/sqrt2, 0],
-            [sqrt2, sqrt2, 0],
-            [1, 1, 1],
-            [1, 1, 1],
+            [1, 1, 0],
+            [2, 2, 0],
+            [sqrt2, sqrt2, sqrt2],
+            [sqrt2, sqrt2, sqrt2],
         ])
 
         stream = Stream()
