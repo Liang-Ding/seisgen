@@ -5,17 +5,12 @@
 mgr = DSGTMgr(sgt_database_folder, model3D_folder, point_cloud_file)
 ```
 
-* Acquire the Green's function in RTZ
+* Acquire 3D Greens function in RTZ
 ```shell
 greens = mgr.get_greens_function(station, origin)
 ```
 
-* Acquire the F-K type greens function
-```shell
-greens = mgr.get_fk_greens_function(station, origin)
-```
-
-* Acquire the synthetic waveform in RTZ
+* Acquire synthetic waveform in RTZ
 ```shell
 stream = mgr.get_waveform(station, origin, mt_RTP)
 ```
