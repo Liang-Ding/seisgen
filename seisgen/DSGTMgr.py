@@ -21,25 +21,9 @@ from obspy.clients.iris import Client
 from obspy.taup import TauPyModel
 
 import numpy as np
+import pandas as pd
 
 import time
-
-MT_ELEMENTS = [
-    'Mrr',
-    'Mtt',
-    'Mpp',
-    'Mrt',
-    'Mrp',
-    'Mtp'
-]
-
-# fundamental faults
-FF_ELEMENT = [
-            "MEP",
-            "MDD",
-            "MDS",
-            "MSS"
-        ]
 
 
 class DSGTMgr(DPointCloud):
@@ -223,107 +207,6 @@ class DSGTMgr(DPointCloud):
         return stream
 
 
-    def get_fk_greens_function(self, station, origin, b_new_origin=True, b_save=False, greens_path=None):
-        '''
-        Get FK-type Greens Function between the station-origin pair.
-        Unit: m/N.m
-
-        :param station: An instance of the obspy AttribDict class. For example:
-                        station = AttribDict({ 'latitude': 34.0210,
-                                                'longitude': -118.287,
-                                                'network': 'CI',
-                                                'station': 'USC',
-                                                'location': '',
-                                                'id': 'USC'})
-
-        :param origin:  An instance of the obspy AttribDict class. For example:
-                        origin = Origin({'time': '2019-07-04T18:39:44.0000Z',
-                                              'latitude': 35.601333,
-                                              'longitude': -117.597,
-                                              'depth_in_m': 2810.0,
-                                              'id': 'evt11056825'})
-
-        :param b_new_origin: Accelerating the extraction of SGT data for multiple stations with the same origin.
-        :param b_save:  Whether to save the greens function to file?
-        :para greens_path: the path to store the Greens function
-        '''
-        sgt = self.get_sgt(station, origin, b_new_origin=b_new_origin)
-        return self.get_fk_greens_function_next(sgt, station, origin, b_save, greens_path)
-
-
-    def get_fk_greens_function_next(self, sgt, station, origin, b_save=False, greens_path=None):
-        '''The next step of get_fk_greens_function()'''
-
-        client = Client()
-        res = client.distaz(stalat=station.latitude, stalon=station.longitude,
-                            evtlat=origin.latitude, evtlon=origin.longitude)
-
-        azimuth = res['azimuth']
-        back_azimuth = res['backazimuth']
-        distance_deg = res['distance']
-        distance_m = res['distancemeters']
-        stream = self._SGT2FKGF(sgt, azimuth, back_azimuth)
-        stream.id = station.id
-
-        # Add SAC header
-        b_sacHdeader = True
-        try:
-            depth_src_km = origin.depth_in_m / 1000.0
-        except:
-            b_sacHdeader = False
-
-        if b_sacHdeader:
-            model = TauPyModel(model="ak135")
-            try:
-                arrivals = model.get_travel_times(source_depth_in_km=depth_src_km,
-                                                  distance_in_degree=distance_deg,
-                                                  phase_list=["p", "s"])
-                sac = AttribDict()
-                sac.o = 0.
-                sac.dist, sac.az, sac.baz = distance_m / 1000, azimuth, back_azimuth
-                sac.stla = station.latitude
-                sac.stlo = station.longitude
-                sac.evla = origin.latitude
-                sac.evlo = origin.longitude
-                sac.evdp = depth_src_km  # in km
-                sac.b = 0.0
-                try:
-                    sac.t1 = arrivals[0].time
-                except:
-                    pass
-                try:
-                    sac.t2 = arrivals[1].time
-                except:
-                    pass
-
-                for tr in stream.traces:
-                    tr.stats.sac = sac
-            except:
-                pass
-
-        if b_save:
-            if not os.path.exists(greens_path):
-                os.makedirs(greens_path)
-
-        # save FK-type Greens function to files.
-        if b_save and greens_path is not None:
-            chs = ['ZDD', 'RDD', 'TDD',
-                   'ZDS', 'RDS', 'TDS',
-                   'ZSS', 'RSS', 'TSS',
-                   'ZEP', 'REP', 'TEP']
-
-            fk_chs = ['0', '1', '2',
-                      '3', '4', '5',
-                      '6', '7', '8',
-                      'a', 'b', 'c']
-
-            for i, ch in enumerate(chs):
-                file_path = os.path.join(greens_path, "%d.grn.%s" % (np.ceil(distance_m/1000.0), fk_chs[i]))
-                stream.select(channel="%s" % ch).write(file_path, format='SAC')
-
-        return stream
-
-
     def get_waveform(self, station, origin, mt_RTP, b_RTZ=False, b_new_origin=True):
         '''
         Return the synthetic 3-C waveform in RTZ.
@@ -375,136 +258,32 @@ class DSGTMgr(DPointCloud):
             _st.rotate(method='NE->RT', back_azimuth=back_azimuth)
         return _st
 
-
-    def _SGT2GF(self, sgt, azi, ba, b_USE=True):
+    def _SGT2GF(self, sgt, azi, ba):
         '''
-        Get 3D MT Greens functions
+        Get 3D MT Greens function
         ( Up-South-East convention (USE) by default, which is compatible with MTUQ,
         otherwise North-East-Down convention)
         '''
 
-        fk_grn_st = self._SGT2FKGF(sgt, azi, ba)
-        stream = Stream()
-
-        az = np.deg2rad(azi)
-        sa = np.sin(az)
-        ca = np.cos(az)
-        sa2 = np.sin(2.0*az)
-        ca2 = np.cos(2.0*az)
-        fk0 = fk_grn_st.select(channel='ZDD').traces[0].data
-        fk1 = fk_grn_st.select(channel='RDD').traces[0].data
-        fk2 = fk_grn_st.select(channel='TDD').traces[0].data
-        fk3 = fk_grn_st.select(channel='ZDS').traces[0].data
-        fk4 = fk_grn_st.select(channel='RDS').traces[0].data
-        fk5 = fk_grn_st.select(channel='TDS').traces[0].data
-
-        fk6 = fk_grn_st.select(channel='ZSS').traces[0].data
-        fk7 = fk_grn_st.select(channel='RSS').traces[0].data
-        fk8 = fk_grn_st.select(channel='TSS').traces[0].data
-        fk9 = fk_grn_st.select(channel='ZEP').traces[0].data
-        fk10 = fk_grn_st.select(channel='REP').traces[0].data
-        fk11 = fk_grn_st.select(channel='TEP').traces[0].data
-
-        # [a-r] = [0-17]
-        n_component = 18
-        npts = len(fk0)
-        mt = np.zeros([n_component, npts])
-        mt[0] = fk9 / 3. - fk0 / 6. - fk6 * ca2 / 2.
-        mt[1] = fk10 / 3. - fk1 / 6. - fk7 * ca2 / 2.
-        mt[2] = -1. * fk8 * sa2 / 2.
-        mt[3] = fk6 * sa2
-        mt[4] = fk7 * sa2
-        mt[5] = -1. * fk8 * ca2
-        mt[6] = -1. * fk3 * ca
-        mt[7] = -1. * fk4 * ca
-        mt[8] = -1. * fk5 * sa
-        mt[9] = fk9 / 3. - fk0 / 6. + fk6 * ca2 / 2.
-        mt[10] = fk10 / 3. - fk1 / 6. + fk7 * ca2 / 2.
-        mt[11] = -1. * mt[2]
-        mt[12] = fk3 * sa
-        mt[13] = fk4 * sa
-        mt[14] = -1. * fk5 * ca
-        mt[15] = (fk9 + fk0) / 3.0
-        mt[16] = (fk10 + fk1) / 3.0
-        mt[17] = np.zeros(npts)
-        grn_chs = ['Z.Mtt', 'R.Mtt', 'T.Mtt',
-                   'Z.Mtp', 'R.Mtp', 'T.Mtp',
-                   'Z.Mrt', 'R.Mrt', 'T.Mrt',
-                   'Z.Mpp', 'R.Mpp', 'T.Mpp',
-                   'Z.Mrp', 'R.Mrp', 'T.Mrp',
-                   'Z.Mrr', 'R.Mrr', 'T.Mrr']
-
-        scales = np.array([1, 1, 1,
-                           -1, -1, -1,
-                           1, 1, 1,
-                           1, 1, 1,
-                           -1, -1, -1,
-                           1, 1, 0])
-
-        if b_USE:
-            # Up - South - East convention
-            for i in range(n_component):
-                _tr = Trace(mt[i])
-                _tr.stats.channel = grn_chs[i]
-                _tr.stats.delta = self.dt
-                _tr.stats.sampling_rate = int(1.0/self.dt)
-                stream.append(_tr)
-        else:
-            # North - East - Down convention
-            for i in range(n_component):
-                _tr = Trace(mt[i] * scales[i])
-                _tr.stats.channel = grn_chs[i]
-                _tr.stats.delta = self.dt
-                _tr.stats.sampling_rate = int(1.0/self.dt)
-                stream.append(_tr)
-        return stream
-
-
-    def _SGT2FKGF(self, sgt, azi, ba):
-        '''Generate fk-type Greens functions. [*.0-8] from DC, [*.a-c] from EP.'''
-        # Fundamental faults:
-        # EP: Explosion source
-        # DD: 45-degree-dip slip
-        # DS: Vertical dip slip
-        # SS: vertical strike slip
-
-        # calculate the moment tensor (ENZ) of fundamental faults (EXP, DD, DS, SS)
-        mt_enz_ff = []
-        strike = [np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-45, np.mod(azi + 270, 360)-67.5]
-        dip_arr = np.array([45, 90, 90])
-        rake_arr = np.array([90, 90, 0])
-        colatitude, lune_longitude = 90, 0
-        _mt_EXP = np.array([1, 1, 1, 0, 0, 0])  # EP
-        mt_enz_ff.append(_mt_EXP)
-
-        # DD, DS, SS
-        for i in range(3):
-            _mt_enz = DMT_enz(strike[i], dip_arr[i], rake_arr[i],
-                              colatitude, lune_longitude)
-            mt_enz_ff.append(_mt_enz)
-        mt_enz_ff = np.asarray(mt_enz_ff)
-        sqrt2 = np.sqrt(2)
-        scaling = np.array([
-            [1, 1, 0],
-            [2, 2, 0],
-            [sqrt2, sqrt2, sqrt2],
-            [sqrt2, sqrt2, sqrt2],
-        ])
+        mt_rtp = pd.DataFrame({
+            "Mrr": np.array([1.0,  0,    0,    0,   0,    0]),
+            "Mtt": np.array([0,    1.0,  0,    0,   0,    0]),
+            "Mpp": np.array([0,    0,   1.0,   0,   0,    0]),
+            "Mrt": np.array([0,    0,   0,     1.0, 0,    0]),
+            "Mrp": np.array([0,    0,   0,     0,   1.0,  0]),
+            "Mtp": np.array([0,    0,   0,     0,   0,    1.0]),
+        })
 
         stream = Stream()
-        for i, mt_enz in enumerate(mt_enz_ff):
-            _st = DSyn(mt_enz, sgt, FF_ELEMENT[i])
+        mt_orders = ['Mrr', 'Mtt', 'Mpp', 'Mrt', 'Mrp', 'Mtp',]
+
+        for i_mt in mt_orders:
+            mt_enz = RTP_to_DENZ(mt_rtp[i_mt].values)
+            _st = DSyn(mt_enz, sgt, element='SYN')
             _st.rotate(method='NE->RT', back_azimuth=ba)
             for _tr in _st:
                 ch = _tr.stats.channel
-                if ch[-1] == 'Z':
-                    _tr.data *= scaling[i][0]
-                elif ch[-1] == 'R':
-                    _tr.data *= scaling[i][1]
-                elif ch[-1] == 'T':
-                    _tr.data *= scaling[i][2]
-
-                _tr.stats.channel = '%s%s' % (ch[-1], ch[1:3])
+                _tr.stats.channel = '%s.%s' % (ch[-1], i_mt)
                 _tr.stats._component = ch[-1]
                 _tr.stats.delta = self.dt
                 _tr.stats.sampling_rate = int(1.0 / self.dt)

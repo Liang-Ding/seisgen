@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="seisgen",
-    version="0.2.0",
+    version="0.2.1",
     author="Liang Ding",
     author_email="myliang.ding@mail.utoronto.ca",
     description="The theoretical seismic waveform generation tool",

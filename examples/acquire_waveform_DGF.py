@@ -37,7 +37,7 @@ def acquire_waveform():
     sgt_mgr = DDGFMgr(sgt_database_folder, model3D_folder, point_info_file)
     print('Acquiring Greens functions...\n')
     force_enz = [1, 0, 1]
-    st_syn = sgt_mgr.sgt_mgr.get_waveform(station, origin, force_enz)
+    st_syn = sgt_mgr.get_waveform(station, origin, force_enz)
     print(st_syn)
 
 
